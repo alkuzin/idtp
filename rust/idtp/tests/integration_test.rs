@@ -13,29 +13,17 @@ mod tests {
 
     #[test]
     fn test_idtp_version_as_bytes() {
-        let version = Version {
-            major: 0x00,
-            minor: 0x00,
-            patch: 0x00,
-        };
+        let version = Version::new(0x0A, 0x0B, 0x0C);
         let bytes = version.as_bytes();
 
-        assert_eq!(bytes, [0x00, 0x00, 0x00]);
+        assert_eq!(bytes, [0x0A, 0x0B, 0x0C]);
 
-        let version = Version {
-            major: 0x01,
-            minor: 0x02,
-            patch: 0x03,
-        };
+        let version = Version::new(0x01, 0x02, 0x03);
         let bytes = version.as_bytes();
 
         assert_eq!(bytes, [0x01, 0x02, 0x03]);
 
-        let version = Version {
-            major: 0xff,
-            minor: 0xff,
-            patch: 0xff,
-        };
+        let version = Version::new(0xff, 0xff, 0xff);
         let bytes = version.as_bytes();
 
         assert_eq!(bytes, [0xff, 0xff, 0xff]);
@@ -66,11 +54,7 @@ mod tests {
         ];
 
         let mut header = IdtpHeader::new();
-        header.version = Version {
-            major: 0,
-            minor: 0,
-            patch: 0,
-        };
+        header.version = Version::new(0, 0, 0);
         header.checksum = 0x1234;
 
         let header_bytes = header.as_bytes_be();

@@ -27,15 +27,33 @@ pub struct Version {
     pub patch: u8,
 }
 
+impl Version {
+    /// Construct new `Version` struct.
+    ///
+    /// # Parameters
+    /// - `major` - given value that increments after incompatible API changes
+    ///   were made.
+    /// - `major` - given value that increments after adding functionality in
+    ///   a backwards-compatible manner.
+    /// - `major` - given value that increments after backwards-compatible bug
+    ///   fixes were made.
+    ///
+    /// # Returns
+    /// - New `Version` struct.
+    pub const fn new(major: u8, minor: u8, patch: u8) -> Self {
+        Self {
+            major,
+            minor,
+            patch,
+        }
+    }
+}
+
 /// Size of IDTP version size in bytes.
 pub const IDTP_VERSION_SIZE: usize = size_of::<Version>();
 
 /// Current IDTP version.
-pub const IDTP_VERSION: Version = Version {
-    major: 1,
-    minor: 0,
-    patch: 0,
-};
+pub const IDTP_VERSION: Version = Version::new(1, 0, 0);
 
 impl Version {
     /// Convert IDTP version to byte slice.
