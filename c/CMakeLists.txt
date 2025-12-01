@@ -11,9 +11,10 @@ set(CMAKE_C_STANDARD_REQUIRED ON) # Enforce the standard.
 set(CMAKE_C_EXTENSIONS OFF)       # Disable compiler-specific extensions.
 
 # Main paths.
-set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
-set(SRC_DIR     ${CMAKE_SOURCE_DIR}/src)
-set(TESTS_DIR   ${CMAKE_SOURCE_DIR}/tests)
+set(INCLUDE_DIR   ${CMAKE_SOURCE_DIR}/include)
+set(SRC_DIR       ${CMAKE_SOURCE_DIR}/src)
+set(TESTS_DIR     ${CMAKE_SOURCE_DIR}/tests)
+set(EXAMPLES_DIR  ${CMAKE_SOURCE_DIR}/../examples/c)
 
 # Project source files.
 set(SRCS "${SRC_DIR}/idtp_header.c" "${SRC_DIR}/idtp.c" "${SRC_DIR}/utils.c")
@@ -60,3 +61,18 @@ target_link_libraries(${TESTS_EXE_NAME} PRIVATE
 # Include project directories for tests.
 target_include_directories(${TESTS_EXE_NAME} PRIVATE ${INCLUDE_DIR})
 add_test(NAME ${TESTS_EXE_NAME} COMMAND ${TESTS_EXE_NAME})
+
+# -----------------------------------------------------------------------------
+
+set(EXAMPLE_EXE_NAME idtp_example)
+add_executable(${EXAMPLE_EXE_NAME})
+
+# Project test source files.
+target_sources(${EXAMPLE_EXE_NAME} PRIVATE "${EXAMPLES_DIR}/idtp_example.c")
+target_compile_options(${EXAMPLE_EXE_NAME} PRIVATE ${CFLAGS})
+
+# Include project directories for examples.
+target_include_directories(${EXAMPLE_EXE_NAME} PRIVATE ${INCLUDE_DIR})
+
+# Link libraries to examples.
+target_link_libraries(${EXAMPLE_EXE_NAME} PRIVATE ${PROJECT_NAME})
