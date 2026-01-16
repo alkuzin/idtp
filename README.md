@@ -34,7 +34,7 @@ IDTP solves the problem of **unifying data exchange** between different types of
 ## 📄 Documentation
 
 For complete technical implementation of protocol
-read [technical specification v2.0.0](docs/specification.md).
+read [technical specification v2.0.0](docs/SPECIFICATION.md).
 
 ## 📦 Implementations
 
