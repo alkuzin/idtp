@@ -9,6 +9,8 @@
 
 It is tailored for **autonomous navigation**, **wearable devices** and **robotics** where low latency, and data integrity are paramount.
 
+[See what's new in IDTP v2.0](CHANGELOG.md)
+
 ## 🎯 Why IDTP?
 
 IDTP solves the problem of **unifying data exchange** between different types of **Inertial Measurement Units (IMU)** and host systems, providing a multi-level data integrity checking.
