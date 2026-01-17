@@ -11,5 +11,17 @@ repository  = "https://github.com/alkuzin/idtp"
 license     = "Apache-2.0"
 edition     = "2024"
 
+# Project features section.
+[features]
+software_impl = ["dep:crc", "dep:hmac", "dep:sha2"]
+
 # Project dependencies section.
 [dependencies]
+# Zerocopy makes zero-cost memory manipulation effortless.
+zerocopy = { version = "0.8", features = ["derive"] }
+# Rust implementation of CRC.
+crc = { version = "3.4.0", optional = true }
+# Generic implementation of Hash-based Message Authentication Code (HMAC).
+hmac = { version = "0.12.1", optional = true }
+# An implementation of the SHA-2 cryptographic hash algorithms.
+sha2 = { version = "0.10.9", optional = true }
