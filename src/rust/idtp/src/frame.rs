@@ -250,11 +250,10 @@ impl IdtpFrame {
     /// - Buffer underflow.
     #[cfg(feature = "software_impl")]
     pub fn validate(
-        &self,
         buffer: &[u8],
         key: Option<&[u8]>,
     ) -> IdtpResult<()> {
-        self.validate_with(
+        Self::validate_with(
             buffer,
             crypto::sw_crc8,
             crypto::sw_crc32,
@@ -278,7 +277,6 @@ impl IdtpFrame {
     /// # Errors
     /// - Buffer underflow.
     pub fn validate_with<C8, C32, H>(
-        &self,
         buffer: &[u8],
         calc_crc8: C8,
         calc_crc32: C32,
@@ -312,7 +310,12 @@ impl IdtpFrame {
         let payload_size = header.payload_size as usize;
         let mode = Mode::from(header.mode);
 
-        let trailer_size = self.trailer_size();
+        let trailer_size = match mode {
+            Mode::Lite => 0,
+            Mode::Safety => 4,
+            Mode::Secure => 32,
+            _ => 0,
+        };
 
         let data_size = header_size + payload_size;
         let expected_size = data_size + trailer_size;
