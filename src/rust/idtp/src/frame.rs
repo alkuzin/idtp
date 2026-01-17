@@ -311,10 +311,9 @@ impl IdtpFrame {
         let mode = Mode::from(header.mode);
 
         let trailer_size = match mode {
-            Mode::Lite => 0,
             Mode::Safety => 4,
             Mode::Secure => 32,
-            _ => 0,
+            Mode::Lite | Mode::Unknown => 0,
         };
 
         let data_size = header_size + payload_size;
