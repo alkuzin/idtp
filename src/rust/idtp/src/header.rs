@@ -13,7 +13,7 @@ pub const IDTP_PREAMBLE: u32 = 0x5054_4449;
 pub const IDTP_VERSION: u8 = 0x20;
 
 /// IDTP operating mode.
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u8)]
 pub enum Mode {
     /// `IDTP-L (Lite mode)` - operating mode for minimum latency & overhead
