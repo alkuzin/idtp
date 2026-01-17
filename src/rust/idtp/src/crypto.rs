@@ -20,8 +20,11 @@ use sha2::Sha256;
 /// # Returns
 /// - `CRC-8` - in case of success.
 /// - `Err` - otherwise.
+///
+/// # Errors
+/// - None.
 #[cfg(feature = "software_impl")]
-pub fn sw_crc8(data: &[u8]) -> IdtpResult<u8> {
+pub const fn sw_crc8(data: &[u8]) -> IdtpResult<u8> {
     Ok(Crc::<u8>::new(&CRC_8_AUTOSAR).checksum(data))
 }
 
@@ -33,8 +36,11 @@ pub fn sw_crc8(data: &[u8]) -> IdtpResult<u8> {
 /// # Returns
 /// - `CRC-32` - in case of success.
 /// - `Err` - otherwise.
+///
+/// # Errors
+/// - None.
 #[cfg(feature = "software_impl")]
-pub fn sw_crc32(data: &[u8]) -> IdtpResult<u32> {
+pub const fn sw_crc32(data: &[u8]) -> IdtpResult<u32> {
     Ok(Crc::<u32>::new(&CRC_32_AUTOSAR).checksum(data))
 }
 
@@ -47,10 +53,13 @@ pub fn sw_crc32(data: &[u8]) -> IdtpResult<u32> {
 /// # Returns
 /// - Closure for calculating software-based `HMAC-SHA256` - in case of success.
 /// - `Err` - otherwise.
+///
+/// # Errors
+/// - Invalid HMAC key.
 #[cfg(feature = "software_impl")]
-pub fn sw_hmac_closure<'a>(
-    key: Option<&'a [u8]>,
-) -> impl FnOnce(&[u8]) -> IdtpResult<[u8; 32]> + 'a {
+pub fn sw_hmac_closure(
+    key: Option<&[u8]>,
+) -> impl FnOnce(&[u8]) -> IdtpResult<[u8; 32]> + '_ {
     move |data: &[u8]| {
         let k = key.ok_or(IdtpError::InvalidHMacKey)?;
 

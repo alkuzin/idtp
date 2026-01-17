@@ -34,6 +34,7 @@ impl IdtpFrame {
     ///
     /// # Returns
     /// - New `IdtpFrame` struct.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             header: IdtpHeader::new(),
@@ -46,7 +47,7 @@ impl IdtpFrame {
     ///
     /// # Parameters
     /// - `header` - given IDTP header to set.
-    pub fn set_header(&mut self, header: &IdtpHeader) {
+    pub const fn set_header(&mut self, header: &IdtpHeader) {
         self.header = *header;
     }
 
@@ -54,21 +55,32 @@ impl IdtpFrame {
     ///
     /// # Parameters
     /// - `payload` - given IDTP payload bytes to set.
-    pub fn set_payload(&mut self, payload: &[u8]) {
+    ///   TODO:
+    ///
+    /// # Errors
+    /// - Buffer underflow.
+    pub fn set_payload(&mut self, payload: &[u8]) -> IdtpResult<()> {
         let payload_size = payload.len();
 
         if payload_size <= IDTP_PAYLOAD_MAX_SIZE {
-            self.payload[0..payload_size].copy_from_slice(payload);
+            self.payload
+                .get_mut(..payload_size)
+                .ok_or(IdtpError::BufferUnderflow)?
+                .copy_from_slice(payload);
             self.payload_size = payload_size;
-            self.header.payload_size = payload_size as u16;
+            self.header.payload_size = u16::try_from(payload_size)
+                .map_err(|_| IdtpError::ParseError)?;
         }
+
+        Ok(())
     }
 
     /// Get IDTP header.
     ///
     /// # Returns
     /// - IDTP header struct.
-    pub fn header(&self) -> IdtpHeader {
+    #[must_use]
+    pub const fn header(&self) -> IdtpHeader {
         self.header
     }
 
@@ -76,15 +88,23 @@ impl IdtpFrame {
     ///
     /// # Returns
     /// - IDTP payload in bytes representation.
-    pub fn payload(&self) -> &[u8] {
-        &self.payload[0..self.payload_size]
+    ///
+    /// # Errors
+    /// - Buffer underflow.
+    pub fn payload(&self) -> IdtpResult<&[u8]> {
+        let payload = &self
+            .payload
+            .get(0..self.payload_size)
+            .ok_or(IdtpError::BufferUnderflow)?;
+        Ok(payload)
     }
 
     /// Get IDTP payload size in bytes.
     ///
     /// # Returns
     /// - IDTP payload in bytes representation.
-    pub fn payload_size(&self) -> usize {
+    #[must_use]
+    pub const fn payload_size(&self) -> usize {
         self.payload_size
     }
 
@@ -92,14 +112,14 @@ impl IdtpFrame {
     ///
     /// # Returns
     /// - Trailer size in bytes.
+    #[must_use]
     pub fn trailer_size(&self) -> usize {
         let mode = Mode::from(self.header.mode);
 
         match mode {
-            Mode::Lite => 0,
             Mode::Safety => 4,
             Mode::Secure => 32,
-            Mode::Unknown => 0,
+            Mode::Lite | Mode::Unknown => 0,
         }
     }
 
@@ -112,6 +132,9 @@ impl IdtpFrame {
     /// # Returns
     /// - Frame size in bytes - in case of success.
     /// - `Err` - otherwise.
+    ///
+    /// # Errors
+    /// - Buffer underflow.
     #[cfg(feature = "software_impl")]
     pub fn pack(
         &self,
@@ -138,6 +161,9 @@ impl IdtpFrame {
     /// # Returns
     /// - Frame size in bytes - in case of success.
     /// - `Err` - otherwise.
+    ///
+    /// # Errors
+    /// - Buffer underflow.
     pub fn pack_with<C8, C32, H>(
         &self,
         buffer: &mut [u8],
@@ -160,34 +186,52 @@ impl IdtpFrame {
 
         // Packing IDTP header & calculating the CRC-8.
         let header_size = IDTP_HEADER_SIZE;
-        buffer[..header_size].copy_from_slice(self.header.as_bytes());
+        buffer
+            .get_mut(..header_size)
+            .ok_or(IdtpError::BufferUnderflow)?
+            .copy_from_slice(self.header.as_bytes());
 
-        let crc8 = calc_crc8(&buffer[..19])?;
-        buffer[19] = crc8;
+        let data = &buffer.get(..19).ok_or(IdtpError::BufferUnderflow)?;
+        let crc8 = calc_crc8(data)?;
+        *buffer.get_mut(19).ok_or(IdtpError::BufferUnderflow)? = crc8;
 
         // Packing payload.
         let payload_size = self.payload_size;
         let payload_range = header_size..header_size + payload_size;
-        buffer[payload_range].copy_from_slice(&self.payload[..payload_size]);
+        let payload = &self
+            .payload
+            .get(..payload_size)
+            .ok_or(IdtpError::BufferUnderflow)?;
+
+        buffer
+            .get_mut(payload_range)
+            .ok_or(IdtpError::BufferUnderflow)?
+            .copy_from_slice(payload);
 
         // Packing frame trailer.
         let data_size = header_size + payload_size;
         let mode = Mode::from(self.header.mode);
         let frame_size = data_size + trailer_size;
+        let data =
+            &buffer.get(..data_size).ok_or(IdtpError::BufferUnderflow)?;
 
         match mode {
-            Mode::Lite => {}
             Mode::Safety => {
-                let crc32 = calc_crc32(&buffer[..data_size])?;
-                buffer[data_size..frame_size]
+                let crc32 = calc_crc32(data)?;
+                buffer
+                    .get_mut(data_size..frame_size)
+                    .ok_or(IdtpError::BufferUnderflow)?
                     .copy_from_slice(&crc32.to_le_bytes());
             }
             Mode::Secure => {
-                let hmac = calc_hmac(&buffer[..data_size])?;
-                buffer[data_size..frame_size].copy_from_slice(&hmac);
+                let hmac = calc_hmac(data)?;
+                buffer
+                    .get_mut(data_size..frame_size)
+                    .ok_or(IdtpError::BufferUnderflow)?
+                    .copy_from_slice(&hmac);
             }
-            Mode::Unknown => {}
-        };
+            Mode::Lite | Mode::Unknown => {}
+        }
 
         Ok(frame_size)
     }
@@ -201,6 +245,9 @@ impl IdtpFrame {
     /// # Returns
     /// - `Ok` - in case of success.
     /// - `Err` - otherwise.
+    ///
+    /// # Errors
+    /// - Buffer underflow.
     #[cfg(feature = "software_impl")]
     pub fn validate(
         &self,
@@ -227,6 +274,9 @@ impl IdtpFrame {
     /// # Returns
     /// - `Ok` - in case of success.
     /// - `Err` - otherwise.
+    ///
+    /// # Errors
+    /// - Buffer underflow.
     pub fn validate_with<C8, C32, H>(
         &self,
         buffer: &[u8],
@@ -246,10 +296,11 @@ impl IdtpFrame {
         }
 
         // Checking CRC-8 of IDTP header.
-        let received_crc8 = buffer[19];
-        let computed_crc8 = calc_crc8(&buffer[..19])?;
+        let received_crc8 = buffer.get(19).ok_or(IdtpError::BufferUnderflow)?;
+        let data = &buffer.get(..19).ok_or(IdtpError::BufferUnderflow)?;
+        let computed_crc8 = calc_crc8(data)?;
 
-        if received_crc8 != computed_crc8 {
+        if *received_crc8 != computed_crc8 {
             return Err(IdtpError::InvalidCrc);
         }
 
@@ -271,32 +322,38 @@ impl IdtpFrame {
         }
 
         let frame_size = data_size + trailer_size;
+        let data =
+            &buffer.get(..data_size).ok_or(IdtpError::BufferUnderflow)?;
 
         // Checking frame trailer.
         match mode {
             Mode::Lite => {}
             Mode::Safety => {
-                let computed_crc32 = calc_crc32(&buffer[..data_size])?;
+                let computed_crc32 = calc_crc32(data)?;
                 let received_crc32 = u32::from_le_bytes(
-                    buffer[data_size..frame_size]
+                    buffer
+                        .get(data_size..frame_size)
+                        .ok_or(IdtpError::BufferUnderflow)?
                         .try_into()
                         .map_err(|_| IdtpError::ParseError)?,
                 );
 
-                if received_crc32 != computed_crc32 {
+                if computed_crc32 != received_crc32 {
                     return Err(IdtpError::InvalidCrc);
                 }
             }
             Mode::Secure => {
-                let computed_hmac = calc_hmac(&buffer[..data_size])?;
-                let received_hmac = &buffer[data_size..data_size + 32];
+                let computed_hmac = calc_hmac(data)?;
+                let received_hmac = buffer
+                    .get(data_size..frame_size)
+                    .ok_or(IdtpError::BufferUnderflow)?;
 
                 if computed_hmac != received_hmac {
                     return Err(IdtpError::InvalidHMac);
                 }
             }
             Mode::Unknown => return Err(IdtpError::InvalidCrc),
-        };
+        }
 
         Ok(())
     }
@@ -324,7 +381,7 @@ impl TryFrom<&[u8]> for IdtpFrame {
             .map_err(|_| IdtpError::ParseError)?
             .0;
 
-        let mut idtp = IdtpFrame::new();
+        let mut idtp = Self::new();
         idtp.header = header;
         idtp.payload_size = header.payload_size as usize;
 
@@ -338,8 +395,15 @@ impl TryFrom<&[u8]> for IdtpFrame {
         let payload_start = header_size;
         let payload_end = header_size + idtp.payload_size;
 
-        idtp.payload[..idtp.payload_size]
-            .copy_from_slice(&buffer[payload_start..payload_end]);
+        let payload = &buffer
+            .get(payload_start..payload_end)
+            .ok_or(IdtpError::BufferUnderflow)?;
+
+        idtp.payload
+            .get_mut(..idtp.payload_size)
+            .ok_or(IdtpError::BufferUnderflow)?
+            .copy_from_slice(payload);
+
         Ok(idtp)
     }
 }

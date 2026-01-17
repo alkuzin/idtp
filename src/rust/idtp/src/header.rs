@@ -6,7 +6,7 @@
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 /// Value to signal the start of a new IDTP frame.
-pub const IDTP_PREAMBLE: u32 = 0x50544449;
+pub const IDTP_PREAMBLE: u32 = 0x5054_4449;
 
 /// Current IDTP version.
 /// For v2.0, the value is 0x20 (where 0x2 is Major and 0x0 is Minor).
@@ -42,10 +42,10 @@ impl From<u8> for Mode {
     /// - IDTP operating mode from byte slice.
     fn from(byte: u8) -> Self {
         match byte {
-            0x00 => Mode::Lite,
-            0x01 => Mode::Safety,
-            0x02 => Mode::Secure,
-            _ => Mode::Unknown,
+            0x00 => Self::Lite,
+            0x01 => Self::Safety,
+            0x02 => Self::Secure,
+            _ => Self::Unknown,
         }
     }
 }
@@ -85,8 +85,9 @@ impl IdtpHeader {
     ///
     /// # Returns
     /// - New `IdtpHeader` object.
+    #[must_use]
     pub fn new() -> Self {
-        IdtpHeader {
+        Self {
             preamble: IDTP_PREAMBLE,
             version: IDTP_VERSION,
             ..Default::default()

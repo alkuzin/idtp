@@ -8,16 +8,24 @@
 //! This crate was designed for use on `embedded systems`.
 
 #![no_std]
-// Ignore #[must_use] suggestions from clippy.
-#![allow(clippy::must_use_candidate)]
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    clippy::panic,
+    clippy::todo,
+    clippy::unreachable,
+    missing_docs
+)]
 
 #[cfg(feature = "software_impl")]
 pub mod crypto;
-mod header;
 mod frame;
+mod header;
 
-pub use header::*;
 pub use frame::*;
+pub use header::*;
 
 /// Protocol errors enumeration.
 #[derive(Debug)]
