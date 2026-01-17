@@ -4,13 +4,13 @@
 # Project package info section.
 [package]
 name        = "idtp_example"
-version     = "0.1.0"
+version     = "2.0.0"
 description = "IMU Data Transfer Protocol usage example"
-authors     = ["nnulldev"]
-repository  = "https://github.com/nnulldev/idtp"
+authors     = ["Alexander <alkuzindev@gmail.com>"]
+repository  = "https://github.com/alkuzin/idtp/examples/rust/idtp_example"
 license     = "Apache-2.0"
 edition     = "2024"
 
 # Project dependencies section.
 [dependencies]
-idtp = { path = "../../../rust/idtp"}
+idtp = { git = "https://github.com/alkuzin/idtp", version = "2.0.0", features = ["software_impl"] }
