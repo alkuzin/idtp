@@ -4,7 +4,7 @@
 # Project package info section.
 [package]
 name        = "idtp"
-version     = "0.1.0"
+version     = "2.0.0"
 description = "IMU Data Transfer Protocol implementation"
 authors     = ["Alexander <alkuzindev@gmail.com>"]
 repository  = "https://github.com/alkuzin/idtp"
@@ -13,6 +13,7 @@ edition     = "2024"
 
 # Project features section.
 [features]
+# Feature to enable software-based calculation for CRC & HMAC.
 software_impl = ["dep:crc", "dep:hmac", "dep:sha2"]
 
 # Project dependencies section.

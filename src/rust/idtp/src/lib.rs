@@ -14,10 +14,10 @@
 #[cfg(feature = "software_impl")]
 pub mod crypto;
 mod header;
-mod idtp;
+mod frame;
 
 pub use header::*;
-pub use idtp::*;
+pub use frame::*;
 
 /// Protocol errors enumeration.
 #[derive(Debug)]
