@@ -43,19 +43,19 @@ mod tests {
             mode: 0,
             ..IdtpHeader::new()
         });
-        assert_eq!(frame.trailer_size(), 0);
+        assert_eq!(frame.trailer_size(), Some(0));
 
         frame.set_header(&IdtpHeader {
             mode: 1,
             ..IdtpHeader::new()
         });
-        assert_eq!(frame.trailer_size(), 4);
+        assert_eq!(frame.trailer_size(), Some(4));
 
         frame.set_header(&IdtpHeader {
             mode: 2,
             ..IdtpHeader::new()
         });
-        assert_eq!(frame.trailer_size(), 32);
+        assert_eq!(frame.trailer_size(), Some(32));
     }
 
     #[test]
@@ -125,13 +125,14 @@ mod tests {
             .unwrap();
 
         let decoded = IdtpFrame::try_from(&buffer[..]).expect("Should decode");
+        let header = decoded.header().unwrap();
 
-        let device_id = decoded.header().device_id;
+        let device_id = header.device_id;
         let decoded_payload = decoded.payload().unwrap();
 
         assert_eq!(device_id, 0x42);
         assert_eq!(decoded_payload, payload);
-        assert_eq!(decoded.payload_size(), 5);
+        assert_eq!(decoded.payload_size(), Some(5));
     }
 
     #[cfg(feature = "software_impl")]
