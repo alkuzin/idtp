@@ -93,4 +93,12 @@ impl IdtpHeader {
             ..Default::default()
         }
     }
+
+    /// Get header size.
+    ///
+    /// # Returns
+    /// - Header size in bytes.
+    pub fn size() -> usize {
+        IDTP_HEADER_SIZE
+    }
 }

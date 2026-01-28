@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0.
 // Copyright (C) 2025-present idtp project and contributors.
 
-//! Inertial Measurement Unit Data Transfer Protocol (IDTP) - network protocol
+//! Inertial Measurement Unit Data Transfer Protocol (IDTP) - binary protocol
 //! used for transferring IMU data. This protocol is suitable for usage in areas
 //! of robotics, unmanned vehicles, wearable devices etc.
 //!
