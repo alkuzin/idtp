@@ -9,7 +9,7 @@
 
 It is tailored for **autonomous navigation**, **wearable devices** and **robotics** where low latency, and data integrity are paramount.
 
-[See what's new in IDTP v2.0](CHANGELOG.md)
+[See what's new in IDTP v2.1](CHANGELOG.md)
 
 ## 🎯 Why IDTP?
 
@@ -34,7 +34,7 @@ IDTP solves the problem of **unifying data exchange** between different types of
 ## 📄 Documentation
 
 For complete technical implementation of protocol
-read [technical specification v2.0.0](docs/SPECIFICATION.md).
+read [technical specification v2.1.0](docs/SPECIFICATION.md).
 
 ## 📦 Implementations
 

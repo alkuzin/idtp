@@ -1,4 +1,4 @@
-# Inertial Measurement Unit Data Transfer Protocol (IDTP) Specification v2.1.0
+# Inertial Measurement Unit Data Transfer Protocol (IDTP) Specification v2.0.0
 
 ## Table of Contents
 
@@ -12,10 +12,6 @@
 - [4.2. Byte Order](#42-byte-order)
 - [4.3. Sections Description](#43-sections-description)
 - [4.4. Protocol Operating Mode](#44-protocol-operating-mode)
-- [4.5. Payload Types](#45-payload-types)
-- [4.5.1. Standard Payload Types](#451-standard-payload-types)
-- [4.5.2. Vendor-Specific Payload Types](#452-vendor-specific-payload-types)
-- [4.5.3. Measurement Units](#453-measurement-units)
 - [5. Error Handling](#5-error-handling)
 - [6. Security](#6-security)
 - [6.1. General Threats and Protection Methods](#61-general-threats-and-protection-methods)
@@ -85,7 +81,7 @@ All multibyte fields **MUST** be transmitted in `Little-Endian` format.
 - `payload_size` - Size of payload in bytes. **MUST NOT** exceed the limit in 972 bytes.
 - `version` - Protocol version. For v2.0, the value **MUST** be `0x20` (where `0x2` is Major and `0x0` is Minor).
 - `mode` - Protocol operating mode.
-- `payload_type` - Both standard & vendor-specific payload type.
+- `payload_type` - Vendor-specific payload type. This is the way to distinguish different types of payload within one organization.
 - `crc` - Cyclic Redundancy Check - value to used for complex error detection. **RECOMMENDED** to use `CRC-8-AUTOSAR` with `0x2F` polynomial. **MUST** be calculated over the first 19 bytes of the header (offsets 0 to 18).
 
 ## 4.4. Protocol Operating Mode
@@ -100,108 +96,6 @@ Frame trailer size **MUST** be 4 bytes and **MUST** hold `CRC-32` value. **RECOM
 - `IDTP-SEC (Secure mode)` [`0x02`] - operating mode with protection against data spoofing. **MUST** be used for data transmission over unsecured channels. Error detection provided by `CRC-8` for header and `HMAC-SHA256` for the whole frame. In order to operate, a shared secret key (pre-shared key) **MUST** be present on the sender and the host.
 Frame trailer size **MUST** be 32 bytes and **MUST** hold `HMAC` value.
 `HMAC` is calculated for the entire frame, including header and payload, but excluding the trailer section itself.
-
-## 4.5. Payload Types
-
-The `payload_type` value ranges **MUST** be divided between standard and vendor-specific types:
-
-- `0x00-0x7F` - for standard types.
-- `0x80-0xFF` - for vendor-specific types.
-
-## 4.5.1. Standard Payload Types
-
-These types **MUST** be within `0x00-0x7F` range.
-Most of the types from this range are reserved for future use, except of:
-
-All sensor readings **MUST** be `float (32 bits)`.
-
-- `Imu3Acc` [`0x00`] - Accelerometer only (for 3-axis sensor).
-
-  | Offset | Field | Type |
-  |--------|-------|------|
-  | 0      | acc_x | f32  |
-  | 4      | acc_y | f32  |
-  | 8      | acc_z | f32  |
-
-- `Imu3Gyr` [`0x01`] - Gyroscope only (for 3-axis sensor).
-
-  | Offset | Field | Type |
-  |--------|-------|------|
-  | 0      | gyr_x | f32  |
-  | 4      | gyr_y | f32  |
-  | 8      | gyr_z | f32  |
-
-- `Imu3Mag`[`0x02`] - Magnetometer only (for 3-axis sensor).
-
-  | Offset | Field | Type |
-  |--------|-------|------|
-  | 0      | mag_x | f32  |
-  | 4      | mag_y | f32  |
-  | 8      | mag_z | f32  |
-
-- `Imu6` [`0x03`] - Accelerometer + Gyroscope readings (for 6-axis sensor).
-
-  | Offset | Field | Type |
-  |--------|-------|------|
-  | 0      | acc_x | f32  |
-  | 4      | acc_y | f32  |
-  | 8      | acc_z | f32  |
-  | 12     | gyr_x | f32  |
-  | 16     | gyr_y | f32  |
-  | 20     | gyr_z | f32  |
-
-- `Imu9` [`0x04`] - Accelerometer + Gyroscope + Magnetometer readings (for 9-axis sensor).
-
-  | Offset | Field | Type |
-  |--------|-------|------|
-  | 0      | acc_x | f32  |
-  | 4      | acc_y | f32  |
-  | 8      | acc_z | f32  |
-  | 12     | gyr_x | f32  |
-  | 16     | gyr_y | f32  |
-  | 20     | gyr_z | f32  |
-  | 24     | mag_x | f32  |
-  | 28     | mag_y | f32  |
-  | 32     | mag_z | f32  |
-
-- `Imu10` [`0x05`] - Accelerometer + Gyroscope + Magnetometer + Barometer readings (for 10-axis sensor).
-
-  | Offset | Field  | Type |
-  |--------|--------|------|
-  | 0      | acc_x  | f32  |
-  | 4      | acc_y  | f32  |
-  | 8      | acc_z  | f32  |
-  | 12     | gyr_x  | f32  |
-  | 16     | gyr_y  | f32  |
-  | 20     | gyr_z  | f32  |
-  | 24     | mag_x  | f32  |
-  | 28     | mag_y  | f32  |
-  | 32     | mag_z  | f32  |
-  | 36     | baro   | f32  |
-
-- `ImuQuat` [`0x06`] - Attitude (Quaternion).
-
-  | Offset | Field | Type |
-  |--------|-------|------|
-  | 0      | w     | f32  |
-  | 4      | x     | f32  |
-  | 8      | y     | f32  |
-  | 12     | z     | f32  |
-
-## 4.5.2. Vendor-Specific Payload Types
-
-These types **MUST** be within `0x80-0xFF` range.
-This is the way to distinguish different types of payload within one organization.
-
-## 4.5.3. Measurement Units
-
-- `Imu3Acc`: Meters per second squared (`m/s^2`).
-- `Imu3Gyr`: Radians per second (`rad/s`).
-- `Imu3Mag`: Microteslas (`μT`).
-- `Imu10 (baro)`: Pascals (`Pa`).
-- `ImuQuat`: Normalized (`w^2 + x^2 + y^2 + z^2 = 1.0`). Hamiltonian order (`wxyz`).
-
-Standard IDTP payloads **MUST** use the `ENU (East-North-Up)` coordinate convention, following the Right-Hand Rule.
 
 ## 5. Error Handling
 
