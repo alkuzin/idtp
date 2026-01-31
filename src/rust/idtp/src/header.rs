@@ -3,14 +3,14 @@
 
 //! IDTP header related declarations.
 
-use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
+use crate::{FromBytes, Immutable, IntoBytes, KnownLayout, idtp_data};
 
 /// Value to signal the start of a new IDTP frame.
 pub const IDTP_PREAMBLE: u32 = 0x5054_4449;
 
 /// Current IDTP version.
-/// For v2.0, the value is 0x20 (where 0x2 is Major and 0x0 is Minor).
-pub const IDTP_VERSION: u8 = 0x20;
+/// For v2.0, the value is 0x21 (where 0x2 is Major and 0x1 is Minor).
+pub const IDTP_VERSION: u8 = 0x21;
 
 /// IDTP operating mode.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -50,31 +50,28 @@ impl From<u8> for Mode {
     }
 }
 
-/// IDTP header struct.
-#[derive(
-    Debug, Default, Clone, Copy, IntoBytes, FromBytes, Immutable, KnownLayout,
-)]
-#[repr(C, packed)]
-pub struct IdtpHeader {
-    /// Value to signal the start of a new IDTP frame.
-    pub preamble: u32,
-    /// Timestamp represents the sensor-local time.
-    pub timestamp: u32,
-    /// Sequence number of IDTP frame sent.
-    pub sequence: u32,
-    /// Vendor-specific unique IMU device identifier.
-    pub device_id: u16,
-    /// Size of packet payload in bytes.
-    pub payload_size: u16,
-    /// Protocol version in format MAJOR.MINOR.
-    pub version: u8,
-    /// Protocol operating mode.
-    pub mode: u8,
-    /// Vendor-specific payload type. This is the way to distinguish different
-    /// types of payload within one organization.
-    pub payload_type: u8,
-    /// Cyclic Redundancy Check - value to used for complex error detection.
-    pub crc: u8,
+idtp_data! {
+    /// IDTP header struct.
+    pub struct IdtpHeader {
+        /// Value to signal the start of a new IDTP frame.
+        pub preamble: u32,
+        /// Timestamp represents the sensor-local time.
+        pub timestamp: u32,
+        /// Sequence number of IDTP frame sent.
+        pub sequence: u32,
+        /// Vendor-specific unique IMU device identifier.
+        pub device_id: u16,
+        /// Size of packet payload in bytes.
+        pub payload_size: u16,
+        /// Protocol version in format MAJOR.MINOR.
+        pub version: u8,
+        /// Protocol operating mode.
+        pub mode: u8,
+        /// Both standard & vendor-specific payload type.
+        pub payload_type: u8,
+        /// Cyclic Redundancy Check - value to used for complex error detection.
+        pub crc: u8,
+    }
 }
 
 /// Size of IDTP header in bytes.
@@ -98,7 +95,9 @@ impl IdtpHeader {
     ///
     /// # Returns
     /// - Header size in bytes.
-    pub fn size() -> usize {
+    #[inline]
+    #[must_use]
+    pub const fn size() -> usize {
         IDTP_HEADER_SIZE
     }
 }
