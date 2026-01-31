@@ -21,17 +21,25 @@
 
 #[cfg(feature = "software_impl")]
 pub mod crypto;
+pub mod payload;
+
+#[macro_use]
+pub mod macros;
+
 mod frame;
 mod header;
 
 pub use frame::*;
 pub use header::*;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 /// Protocol errors enumeration.
 #[derive(Debug)]
 pub enum IdtpError {
     /// Buffer too short.
     BufferUnderflow,
+    /// Buffer too large.
+    BufferOverflow,
     /// Incorrect CRC value.
     InvalidCrc,
     /// Incorrect HMAC value.
@@ -44,3 +52,9 @@ pub enum IdtpError {
 
 /// Result alias for IDTP.
 pub type IdtpResult<T> = Result<T, IdtpError>;
+
+/// Trait for serializable & deserializable data.
+pub trait IdtpData: IntoBytes + FromBytes + Immutable + KnownLayout {}
+
+/// Every type that has these traits also has `IdtpData`.
+impl<T: IntoBytes + FromBytes + Immutable + KnownLayout> IdtpData for T {}
