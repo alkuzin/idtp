@@ -5,7 +5,7 @@
 
 use idtp::{
     IdtpFrame, IdtpHeader, Mode,
-    payload::{IdtpPayload, Imu3Acc, Imu3Gyr, Imu6},
+    payload::{Imu3Acc, Imu3Gyr, Imu6},
 };
 use std::process;
 
@@ -83,9 +83,9 @@ fn main() {
 
     // Extract and use data.
     let header = decoded_frame.header();
-    let payload_bytes = decoded_frame.payload().unwrap();
-    let payload = Imu6::from_bytes(payload_bytes);
 
-    println!("Received header: {:#?}", header);
-    println!("Received payload: {:#?}", payload);
+    if let Ok(payload) = decoded_frame.payload::<Imu6>() {
+        println!("Received header: {:#?}", header);
+        println!("Received payload: {:#?}", payload);
+    }
 }

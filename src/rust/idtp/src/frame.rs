@@ -120,7 +120,7 @@ impl IdtpFrame {
         &self.header
     }
 
-    /// Get IDTP payload.
+    /// Get IDTP payload raw.
     ///
     /// # Returns
     /// - IDTP payload in bytes representation.
@@ -128,11 +128,31 @@ impl IdtpFrame {
     /// # Errors
     /// - Parse error.
     #[inline]
-    pub fn payload(&self) -> IdtpResult<&[u8]> {
-        let payload = self
+    pub fn payload_raw(&self) -> IdtpResult<&[u8]> {
+        let payload_bytes = self
             .payload
             .get(..self.payload_size())
             .ok_or(IdtpError::ParseError)?;
+
+        Ok(payload_bytes)
+    }
+
+    /// Get IDTP payload.
+    ///
+    /// # Returns
+    /// - IDTP payload.
+    ///
+    /// # Errors
+    /// - Parse error.
+    #[inline]
+    pub fn payload<T: IdtpPayload>(&self) -> IdtpResult<T> {
+        let payload_bytes = self
+            .payload
+            .get(..self.payload_size())
+            .ok_or(IdtpError::ParseError)?;
+
+        let payload =
+            T::from_bytes(payload_bytes).map_err(|_| IdtpError::ParseError)?;
 
         Ok(payload)
     }
@@ -251,7 +271,7 @@ impl IdtpFrame {
         // Packing payload.
         let payload_size = self.payload_size();
         let payload_range = header_size..header_size + payload_size;
-        let payload = self.payload()?;
+        let payload = self.payload_raw()?;
 
         buffer
             .get_mut(payload_range)
