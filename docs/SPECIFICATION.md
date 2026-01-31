@@ -83,7 +83,7 @@ All multibyte fields **MUST** be transmitted in `Little-Endian` format.
 - `sequence` - Sequence number of IDTP frame sent.
 - `device_id` - Vendor-specific unique IMU device identifier.
 - `payload_size` - Size of payload in bytes. **MUST NOT** exceed the limit in 972 bytes.
-- `version` - Protocol version. For v2.0, the value **MUST** be `0x20` (where `0x2` is Major and `0x0` is Minor).
+- `version` - Protocol version. For v2.0, the value **MUST** be `0x21` (where `0x2` is Major and `0x1` is Minor).
 - `mode` - Protocol operating mode.
 - `payload_type` - Both standard & vendor-specific payload type.
 - `crc` - Cyclic Redundancy Check - value to used for complex error detection. **RECOMMENDED** to use `CRC-8-AUTOSAR` with `0x2F` polynomial. **MUST** be calculated over the first 19 bytes of the header (offsets 0 to 18).
