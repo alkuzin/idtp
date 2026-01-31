@@ -65,6 +65,7 @@ pub trait IdtpPayload: Sized + IdtpData {
 
 idtp_data! {
     /// Accelerometer only (for 3-axis sensor).
+    #[derive(Default)]
     pub struct Imu3Acc {
         /// Acceleration along the X-axis in meters per second squared (`m/s²`).
         pub acc_x: f32,
@@ -75,6 +76,7 @@ idtp_data! {
     }
 
     /// Gyroscope only (for 3-axis sensor).
+    #[derive(Default)]
     pub struct Imu3Gyr {
         /// Angular velocity along the X-axis in radians per second (`rad/s`).
         pub gyr_x: f32,
@@ -85,6 +87,7 @@ idtp_data! {
     }
 
     /// Magnetometer only (for 3-axis sensor).
+    #[derive(Default)]
     pub struct Imu3Mag {
         /// Magnetic field induction along the X-axis in microteslas (`μT`).
         pub mag_x: f32,
@@ -95,6 +98,7 @@ idtp_data! {
     }
 
     /// Accelerometer + Gyroscope readings (for 6-axis sensor).
+    #[derive(Default)]
     pub struct Imu6 {
         /// Accelerometer readings along 3 axes.
         pub acc: Imu3Acc,
@@ -103,6 +107,7 @@ idtp_data! {
     }
 
     /// Accelerometer + Gyroscope + Magnetometer readings (for 9-axis sensor).
+    #[derive(Default)]
     pub struct Imu9 {
         /// Accelerometer readings along 3 axes.
         pub acc: Imu3Acc,
@@ -114,6 +119,7 @@ idtp_data! {
 
     /// Accelerometer + Gyroscope + Magnetometer + Barometer readings
     /// (for 10-axis sensor).
+    #[derive(Default)]
     pub struct Imu10 {
         /// Accelerometer readings along 3 axes.
         pub acc: Imu3Acc,
@@ -127,6 +133,7 @@ idtp_data! {
 
     /// Attitude. Hamiltonian Quaternion (w, x, y, z).
     /// **MUST** be normalized.
+    #[derive(Default)]
     pub struct ImuQuat {
         /// Scalar component.
         pub w: f32,

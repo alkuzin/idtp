@@ -51,6 +51,7 @@ impl From<u8> for Mode {
 }
 
 idtp_data! {
+    #[derive(Default)]
     /// IDTP header struct.
     pub struct IdtpHeader {
         /// Value to signal the start of a new IDTP frame.

@@ -9,7 +9,7 @@ macro_rules! idtp_data {
     ($($item:item)*) => {
         $(
             #[derive(
-                Debug, Default, Clone, Copy,
+                Debug, Clone, Copy,
                 IntoBytes, FromBytes, Immutable, KnownLayout,
             )]
             #[repr(C, packed)]
