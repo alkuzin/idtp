@@ -4,7 +4,7 @@
 # Project package info section.
 [package]
 name        = "idtp"
-version     = "2.1.0"
+version     = "3.0.0"
 description = "IMU Data Transfer Protocol implementation"
 authors     = ["Alexander <alkuzindev@gmail.com>"]
 repository  = "https://github.com/alkuzin/idtp"
@@ -13,8 +13,12 @@ edition     = "2024"
 
 # Project features section.
 [features]
+# Features that used by default.
+default = ["std_payloads"]
 # Feature to enable software-based calculation for CRC & HMAC.
 software_impl = ["dep:crc", "dep:hmac", "dep:sha2"]
+# Feature that enables standard payloads.
+std_payloads = []
 
 # Project dependencies section.
 [dependencies]

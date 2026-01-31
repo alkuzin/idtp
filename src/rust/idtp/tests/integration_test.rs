@@ -5,9 +5,9 @@
 
 #[cfg(test)]
 mod tests {
-    use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
     use idtp::payload::{IdtpPayload, Imu6};
     use idtp::*;
+    use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
     #[test]
     fn test_constants() {
