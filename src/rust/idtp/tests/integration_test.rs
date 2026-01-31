@@ -5,8 +5,9 @@
 
 #[cfg(test)]
 mod tests {
+    use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
+    use idtp::payload::{IdtpPayload, Imu6};
     use idtp::*;
-    use zerocopy::IntoBytes;
 
     #[test]
     fn test_constants() {
@@ -43,31 +44,31 @@ mod tests {
             mode: 0,
             ..IdtpHeader::new()
         });
-        assert_eq!(frame.trailer_size(), Some(0));
+        assert_eq!(frame.trailer_size(), 0);
 
         frame.set_header(&IdtpHeader {
             mode: 1,
             ..IdtpHeader::new()
         });
-        assert_eq!(frame.trailer_size(), Some(4));
+        assert_eq!(frame.trailer_size(), 4);
 
         frame.set_header(&IdtpHeader {
             mode: 2,
             ..IdtpHeader::new()
         });
-        assert_eq!(frame.trailer_size(), Some(32));
+        assert_eq!(frame.trailer_size(), 32);
     }
 
     #[test]
     fn test_pack_with_custom_closures() {
         let mut frame = IdtpFrame::new();
         let payload = [0xAA, 0xBB, 0xCC];
-        let _ = frame.set_payload(&payload);
 
         frame.set_header(&IdtpHeader {
             mode: 1,
             ..IdtpHeader::new()
         });
+        let _ = frame.set_payload_raw(&payload, 0x80);
 
         let mut buffer = [0u8; 128];
 
@@ -90,12 +91,11 @@ mod tests {
     #[test]
     fn test_buffer_underflow_protection() {
         let mut frame = IdtpFrame::new();
-        let _ = frame.set_payload(&[0u8; 100]);
-
         frame.set_header(&IdtpHeader {
             mode: 1,
             ..IdtpHeader::new()
         });
+        let _ = frame.set_payload_raw(&[0u8; 100], 0x80);
 
         let mut small_buffer = [0u8; 20 + 100 + 3];
         let result = frame.pack_with(
@@ -119,20 +119,20 @@ mod tests {
             mode: 0,
             ..IdtpHeader::new()
         });
-        frame.set_payload(payload).unwrap();
+        frame.set_payload_raw(payload, 0x80).unwrap();
         frame
             .pack_with(&mut buffer, |_| Ok(0), |_| Ok(0), |_| Ok([0u8; 32]))
             .unwrap();
 
         let decoded = IdtpFrame::try_from(&buffer[..]).expect("Should decode");
-        let header = decoded.header().unwrap();
+        let header = decoded.header();
 
         let device_id = header.device_id;
-        let decoded_payload = decoded.payload().unwrap();
+        let decoded_payload = decoded.payload_raw().unwrap();
 
         assert_eq!(device_id, 0x42);
         assert_eq!(decoded_payload, payload);
-        assert_eq!(decoded.payload_size(), Some(5));
+        assert_eq!(decoded.payload_size(), 5);
     }
 
     #[cfg(feature = "software_impl")]
@@ -143,7 +143,7 @@ mod tests {
             mode: 1,
             ..IdtpHeader::new()
         });
-        let _ = frame.set_payload(b"IntegrityCheck");
+        let _ = frame.set_payload_raw(b"IntegrityCheck", 0x80);
 
         let mut buffer = [0u8; 256];
         let size = frame.pack(&mut buffer, None).unwrap();
@@ -168,7 +168,7 @@ mod tests {
             mode: 2,
             ..IdtpHeader::new()
         });
-        let _ = frame.set_payload(b"SecretData");
+        let _ = frame.set_payload_raw(b"SecretData", 0x80);
 
         let key = b"very_secure_key_32_bytes_length_";
         let mut buffer = [0u8; 256];
@@ -181,5 +181,76 @@ mod tests {
             IdtpFrame::validate(&buffer[..size], Some(bad_key)),
             Err(IdtpError::InvalidHMac)
         ));
+    }
+
+    // Mock payload for testing
+    idtp_data! {
+        pub struct TestPayload {
+            pub value: f32,
+        }
+    }
+
+    impl IdtpPayload for TestPayload {
+        const TYPE_ID: u8 = 0x7F; // Use a distinct standard-range ID
+    }
+
+    #[test]
+    fn test_set_payload_success() {
+        let mut frame = IdtpFrame::new();
+        let data = TestPayload { value: 42.42 };
+
+        let result = frame.set_payload(&data);
+
+        assert!(result.is_ok());
+
+        // Verifying header sync.
+        let header = frame.header();
+        let payload_type = header.payload_type;
+        let payload_size = header.payload_size;
+
+        assert_eq!(payload_type, 0x7F);
+        assert_eq!(payload_size, 4);
+
+        // Verifying data integrity.
+        let extracted: &TestPayload =
+            &frame.payload::<TestPayload>().expect("Failed to extract");
+
+        let value = extracted.value;
+        assert_eq!(value, 42.42);
+    }
+
+    #[test]
+    fn test_set_payload_updates_size_correctly() {
+        let mut frame = IdtpFrame::new();
+
+        // Testing with Imu6 (24 bytes).
+        let imu_data = Imu6::default();
+        frame.set_payload(&imu_data).unwrap();
+
+        let header = frame.header();
+        let payload_type = header.payload_type;
+        let payload_size = header.payload_size;
+
+        assert_eq!(payload_size, 24);
+        assert_eq!(payload_type, 0x03);
+    }
+
+    // Creating a payload that is too large.
+    idtp_data! {
+        struct HugePayload([u8; 1000]); // 1000 > 972 bytes.
+    }
+
+    impl IdtpPayload for HugePayload {
+        const TYPE_ID: u8 = 0x80;
+    }
+
+    #[test]
+    fn test_payload_buffer_overflow() {
+        let mut frame = IdtpFrame::new();
+
+        let huge = HugePayload([0u8; 1000]);
+        let result = frame.set_payload(&huge);
+
+        assert!(matches!(result, Err(IdtpError::BufferOverflow)));
     }
 }
