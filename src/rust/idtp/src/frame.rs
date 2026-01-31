@@ -5,7 +5,10 @@
 
 #[cfg(feature = "software_impl")]
 use crate::crypto;
-use crate::{IDTP_HEADER_SIZE, IdtpError, IdtpHeader, IdtpResult, Mode};
+use crate::{
+    IDTP_HEADER_SIZE, IdtpError, IdtpHeader, IdtpResult, Mode,
+    payload::IdtpPayload,
+};
 use zerocopy::{FromBytes, IntoBytes};
 
 /// IDTP frame max size in bytes. It includes size of IDTP header,
@@ -19,14 +22,12 @@ pub const IDTP_FRAME_MIN_SIZE: usize = IDTP_HEADER_SIZE;
 pub const IDTP_PAYLOAD_MAX_SIZE: usize = 972;
 
 /// Inertial Measurement Unit Data Transfer Protocol frame struct.
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct IdtpFrame {
     /// IDTP frame header.
-    header: Option<IdtpHeader>,
-    /// Value that containing IMU data.
-    payload: Option<[u8; IDTP_PAYLOAD_MAX_SIZE]>,
-    /// IDTP payload size in bytes.
-    payload_size: Option<usize>,
+    header: IdtpHeader,
+    /// Buffer that containing IDTP payload.
+    payload: [u8; IDTP_PAYLOAD_MAX_SIZE],
 }
 
 impl IdtpFrame {
@@ -44,37 +45,67 @@ impl IdtpFrame {
     /// # Parameters
     /// - `header` - given IDTP header to set.
     pub const fn set_header(&mut self, header: &IdtpHeader) {
-        self.header = Some(*header);
+        self.header = *header;
+    }
+
+    /// Set IDTP payload from raw bytes.
+    ///
+    /// # Parameters
+    /// - `bytes` - given IDTP payload bytes to set.
+    /// - `payload_type` - given IDTP payload type to set.
+    ///
+    /// # Errors
+    /// - Buffer overflow.
+    pub fn set_payload_raw(
+        &mut self,
+        bytes: &[u8],
+        payload_type: u8,
+    ) -> IdtpResult<()> {
+        let size = bytes.len();
+
+        if size > IDTP_FRAME_MAX_SIZE {
+            return Err(IdtpError::BufferOverflow);
+        }
+
+        self.payload
+            .get_mut(..size)
+            .ok_or(IdtpError::BufferOverflow)?
+            .copy_from_slice(bytes);
+        self.header.payload_type = payload_type;
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            self.header.payload_size = size as u16;
+        }
+
+        Ok(())
     }
 
     /// Set IDTP payload.
     ///
     /// # Parameters
-    /// - `bytes` - given IDTP payload bytes to set.
+    /// - `payload` - given IDTP payload data to set.
     ///
     /// # Errors
-    /// - Buffer underflow.
-    /// - Parse error.
-    pub fn set_payload(&mut self, bytes: &[u8]) -> IdtpResult<()> {
-        let payload_size = bytes.len();
+    /// - Buffer overflow.
+    pub fn set_payload<T: IdtpPayload>(
+        &mut self,
+        payload: &T,
+    ) -> IdtpResult<()> {
+        let bytes = payload.to_bytes();
+        let size = bytes.len();
 
-        if payload_size <= IDTP_PAYLOAD_MAX_SIZE {
-            let mut payload = self.payload.unwrap_or([0; IDTP_PAYLOAD_MAX_SIZE]);
-            payload
-                .get_mut(..payload_size)
-                .ok_or(IdtpError::BufferUnderflow)?
-                .copy_from_slice(bytes);
+        if size > IDTP_PAYLOAD_MAX_SIZE {
+            return Err(IdtpError::BufferOverflow);
+        }
 
-            self.payload = Some(payload);
-            self.payload_size = Some(payload_size);
-
-            if let Some(ref mut header) = self.header {
-                header.payload_size = u16::try_from(payload_size)
-                    .map_err(|_| IdtpError::ParseError)?;
-            }
-            else {
-                return Err(IdtpError::ParseError);
-            }
+        self.payload
+            .get_mut(..size)
+            .ok_or(IdtpError::BufferOverflow)?
+            .copy_from_slice(bytes);
+        self.header.payload_type = T::payload_type();
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            self.header.payload_size = size as u16;
         }
 
         Ok(())
@@ -83,11 +114,10 @@ impl IdtpFrame {
     /// Get IDTP header.
     ///
     /// # Returns
-    /// - IDTP header struct if set.
-    /// - `None` - otherwise.
+    /// - IDTP header object.
     #[must_use]
-    pub const fn header(&self) -> Option<IdtpHeader> {
-        self.header
+    pub const fn header(&self) -> &IdtpHeader {
+        &self.header
     }
 
     /// Get IDTP payload.
@@ -96,19 +126,15 @@ impl IdtpFrame {
     /// - IDTP payload in bytes representation.
     ///
     /// # Errors
-    /// - Buffer underflow.
+    /// - Parse error.
+    #[inline]
     pub fn payload(&self) -> IdtpResult<&[u8]> {
-        if let Some(payload) = self.payload.as_ref() {
-            if let Some(payload_size) = self.payload_size {
-                return Ok(
-                    payload
-                        .get(..payload_size)
-                        .ok_or(IdtpError::BufferUnderflow)?
-                );
-            }
-        }
+        let payload = self
+            .payload
+            .get(..self.payload_size())
+            .ok_or(IdtpError::ParseError)?;
 
-        Err(IdtpError::ParseError)
+        Ok(payload)
     }
 
     /// Get IDTP payload size in bytes.
@@ -116,9 +142,10 @@ impl IdtpFrame {
     /// # Returns
     /// - IDTP payload in bytes representation if set.
     /// - `None` - otherwise.
+    #[inline]
     #[must_use]
-    pub const fn payload_size(&self) -> Option<usize> {
-        self.payload_size
+    pub const fn payload_size(&self) -> usize {
+        self.header.payload_size as usize
     }
 
     /// Get frame trailer size.
@@ -127,20 +154,14 @@ impl IdtpFrame {
     /// - Trailer size in bytes is header is set.
     /// - `None` - otherwise.
     #[must_use]
-    pub fn trailer_size(&self) -> Option<usize> {
-        if let Some(header) = self.header {
-            let mode = Mode::from(header.mode);
+    pub fn trailer_size(&self) -> usize {
+        let mode = Mode::from(self.header.mode);
 
-            let size = match mode {
-                Mode::Safety => 4,
-                Mode::Secure => 32,
-                Mode::Lite | Mode::Unknown => 0,
-            };
-
-            return Some(size);
+        match mode {
+            Mode::Safety => 4,
+            Mode::Secure => 32,
+            Mode::Lite | Mode::Unknown => 0,
         }
-
-        None
     }
 
     /// Get frame size.
@@ -148,14 +169,10 @@ impl IdtpFrame {
     /// # Returns
     /// - Frame size in bytes if header and payload are set.
     /// - `None` - otherwise.
-    pub fn size(&self) -> Option<usize> {
-        if let Some(payload_size) = self.payload_size() {
-            if let Some(trailer_size) = self.trailer_size() {
-                return Some(IDTP_FRAME_MIN_SIZE + payload_size + trailer_size);
-            }
-        }
-
-        None
+    #[inline]
+    #[must_use]
+    pub fn size(&self) -> usize {
+        IDTP_FRAME_MIN_SIZE + self.payload_size() + self.trailer_size()
     }
 
     /// Pack into raw IDTP frame. `CRC` & `HMAC` calculation is software-based.
@@ -211,15 +228,15 @@ impl IdtpFrame {
         C32: FnOnce(&[u8]) -> IdtpResult<u32>,
         H: FnOnce(&[u8]) -> IdtpResult<[u8; 32]>,
     {
-        let trailer_size = self.trailer_size().ok_or(IdtpError::ParseError)?;
-        let expected_size = self.size().ok_or(IdtpError::ParseError)?;
+        let trailer_size = self.trailer_size();
+        let expected_size = self.size();
 
         if buffer.len() < expected_size {
             return Err(IdtpError::BufferUnderflow);
         }
 
         // Packing IDTP header & calculating the CRC-8.
-        let header = self.header.ok_or(IdtpError::ParseError)?;
+        let header = self.header;
         let header_size = IdtpHeader::size();
 
         buffer
@@ -232,7 +249,7 @@ impl IdtpFrame {
         *buffer.get_mut(19).ok_or(IdtpError::BufferUnderflow)? = crc8;
 
         // Packing payload.
-        let payload_size = self.payload_size.ok_or(IdtpError::ParseError)?;
+        let payload_size = self.payload_size();
         let payload_range = header_size..header_size + payload_size;
         let payload = self.payload()?;
 
@@ -282,10 +299,7 @@ impl IdtpFrame {
     /// # Errors
     /// - Buffer underflow.
     #[cfg(feature = "software_impl")]
-    pub fn validate(
-        buffer: &[u8],
-        key: Option<&[u8]>,
-    ) -> IdtpResult<()> {
+    pub fn validate(buffer: &[u8], key: Option<&[u8]>) -> IdtpResult<()> {
         Self::validate_with(
             buffer,
             crypto::sw_crc8,
@@ -394,6 +408,19 @@ impl IdtpFrame {
     }
 }
 
+impl Default for IdtpFrame {
+    /// Construct default IDTP frame.
+    ///
+    /// # Returns
+    /// - New default IDTP frame.
+    fn default() -> Self {
+        Self {
+            header: IdtpHeader::default(),
+            payload: [0u8; IDTP_PAYLOAD_MAX_SIZE],
+        }
+    }
+}
+
 impl TryFrom<&[u8]> for IdtpFrame {
     type Error = IdtpError;
 
@@ -421,7 +448,7 @@ impl TryFrom<&[u8]> for IdtpFrame {
 
         let payload_size = header.payload_size as usize;
 
-        let trailer_size = idtp.trailer_size().ok_or(IdtpError::ParseError)?;
+        let trailer_size = idtp.trailer_size();
         let expected_size = header_size + payload_size + trailer_size;
 
         if buffer.len() < expected_size {
@@ -435,7 +462,7 @@ impl TryFrom<&[u8]> for IdtpFrame {
             .get(payload_begin..payload_end)
             .ok_or(IdtpError::BufferUnderflow)?;
 
-        idtp.set_payload(payload)?;
+        idtp.set_payload_raw(payload, header.payload_type)?;
         Ok(idtp)
     }
 }
