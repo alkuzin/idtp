@@ -63,13 +63,23 @@ pub trait IdtpPayload: Sized + IdtpData {
     }
 }
 
+/// Trait for converting payload to metrics array and vice versa.
+pub trait AsMetricsArray<const N: usize> {
+    /// Convert metrics to a fixed-size array for.
+    ///
+    /// # Returns
+    /// - Fixed-size array of payload members.
+    fn to_array(&self) -> [f32; N];
+}
+
 #[cfg(feature = "std_payloads")]
 pub use std_payloads::*;
 
 #[cfg(feature = "std_payloads")]
 mod std_payloads {
     use super::{
-        FromBytes, IdtpPayload, Immutable, IntoBytes, KnownLayout, idtp_data,
+        AsMetricsArray, FromBytes, IdtpPayload, Immutable, IntoBytes,
+        KnownLayout, idtp_data,
     };
 
     idtp_data! {
@@ -165,31 +175,152 @@ mod std_payloads {
         }
     }
 
+    /// Enumeration of standard payload types.
+    #[derive(Debug)]
+    #[repr(u8)]
+    pub enum PayloadType {
+        /// Accelerometer only (for 3-axis sensor).
+        Imu3Acc = 0x00,
+        /// Gyroscope only (for 3-axis sensor).
+        Imu3Gyr = 0x01,
+        /// Magnetometer only (for 3-axis sensor).
+        Imu3Mag = 0x02,
+        /// Accelerometer + Gyroscope readings (for 6-axis sensor).
+        Imu6 = 0x03,
+        /// Accelerometer + Gyroscope + Magnetometer readings
+        /// (for 9-axis sensor).
+        Imu9 = 0x04,
+        /// Accelerometer + Gyroscope + Magnetometer + Barometer readings
+        /// (for 10-axis sensor).
+        Imu10 = 0x05,
+        /// Attitude. Hamiltonian Quaternion (w, x, y, z).
+        /// **MUST** be normalized.
+        ImuQuat = 0x06,
+    }
+
     impl IdtpPayload for Imu3Acc {
-        const TYPE_ID: u8 = 0x00;
+        const TYPE_ID: u8 = PayloadType::Imu3Acc as u8;
+    }
+
+    impl AsMetricsArray<3> for Imu3Acc {
+        /// Convert metrics to a fixed-size array for.
+        ///
+        /// # Returns
+        /// - Fixed-size array of payload members.
+        fn to_array(&self) -> [f32; 3] {
+            [self.acc_x, self.acc_y, self.acc_z]
+        }
     }
 
     impl IdtpPayload for Imu3Gyr {
-        const TYPE_ID: u8 = 0x01;
+        const TYPE_ID: u8 = PayloadType::Imu3Gyr as u8;
+    }
+
+    impl AsMetricsArray<3> for Imu3Gyr {
+        /// Convert metrics to a fixed-size array for.
+        ///
+        /// # Returns
+        /// - Fixed-size array of payload members.
+        fn to_array(&self) -> [f32; 3] {
+            [self.gyr_x, self.gyr_y, self.gyr_z]
+        }
     }
 
     impl IdtpPayload for Imu3Mag {
-        const TYPE_ID: u8 = 0x02;
+        const TYPE_ID: u8 = PayloadType::Imu3Mag as u8;
+    }
+
+    impl AsMetricsArray<3> for Imu3Mag {
+        /// Convert metrics to a fixed-size array for.
+        ///
+        /// # Returns
+        /// - Fixed-size array of payload members.
+        fn to_array(&self) -> [f32; 3] {
+            [self.mag_x, self.mag_y, self.mag_z]
+        }
     }
 
     impl IdtpPayload for Imu6 {
-        const TYPE_ID: u8 = 0x03;
+        const TYPE_ID: u8 = PayloadType::Imu6 as u8;
+    }
+
+    impl AsMetricsArray<6> for Imu6 {
+        /// Convert metrics to a fixed-size array for.
+        ///
+        /// # Returns
+        /// - Fixed-size array of payload members.
+        fn to_array(&self) -> [f32; 6] {
+            [
+                self.acc.acc_x,
+                self.acc.acc_y,
+                self.acc.acc_z,
+                self.gyr.gyr_x,
+                self.gyr.gyr_y,
+                self.gyr.gyr_z,
+            ]
+        }
     }
 
     impl IdtpPayload for Imu9 {
-        const TYPE_ID: u8 = 0x04;
+        const TYPE_ID: u8 = PayloadType::Imu9 as u8;
+    }
+
+    impl AsMetricsArray<9> for Imu9 {
+        /// Convert metrics to a fixed-size array for.
+        ///
+        /// # Returns
+        /// - Fixed-size array of payload members.
+        fn to_array(&self) -> [f32; 9] {
+            [
+                self.acc.acc_x,
+                self.acc.acc_y,
+                self.acc.acc_z,
+                self.gyr.gyr_x,
+                self.gyr.gyr_y,
+                self.gyr.gyr_z,
+                self.mag.mag_x,
+                self.mag.mag_y,
+                self.mag.mag_z,
+            ]
+        }
     }
 
     impl IdtpPayload for Imu10 {
-        const TYPE_ID: u8 = 0x05;
+        const TYPE_ID: u8 = PayloadType::Imu10 as u8;
+    }
+
+    impl AsMetricsArray<10> for Imu10 {
+        /// Convert metrics to a fixed-size array for.
+        ///
+        /// # Returns
+        /// - Fixed-size array of payload members.
+        fn to_array(&self) -> [f32; 10] {
+            [
+                self.acc.acc_x,
+                self.acc.acc_y,
+                self.acc.acc_z,
+                self.gyr.gyr_x,
+                self.gyr.gyr_y,
+                self.gyr.gyr_z,
+                self.mag.mag_x,
+                self.mag.mag_y,
+                self.mag.mag_z,
+                self.baro,
+            ]
+        }
     }
 
     impl IdtpPayload for ImuQuat {
-        const TYPE_ID: u8 = 0x06;
+        const TYPE_ID: u8 = PayloadType::ImuQuat as u8;
+    }
+
+    impl AsMetricsArray<4> for ImuQuat {
+        /// Convert metrics to a fixed-size array for.
+        ///
+        /// # Returns
+        /// - Fixed-size array of payload members.
+        fn to_array(&self) -> [f32; 4] {
+            [self.w, self.x, self.y, self.z]
+        }
     }
 }
