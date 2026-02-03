@@ -24,7 +24,7 @@ IDTP solves the problem of **unifying data exchange** between different types of
   - `IDTP-L (Lite)`: 0% frame trailer overhead, only **CRC-8** for header.
   - `IDTP-S (Safety)`: **CRC-32** for the whole frame protection.
   - `IDTP-SEC (Secure)`: **HMAC-SHA256** for data spoofing protection.
-
+- **Standard & custom payloads**: IDTP supports several standard payloads that cover most of the uses and ready to use out the box.
 ---
 
 ![IDTP Frame Structure](res/idtp_v2.0.0_frame.png)
@@ -46,6 +46,31 @@ read [technical specification v2.1.0](docs/SPECIFICATION.md).
     *   Fully `no_std` compatible. Designed specifically for memory-safe embedded environments.
     *   Zero-allocation crate.
     *   Few external dependencies.
+
+## 🛠 Custom Payloads
+
+While IDTP supports several standard payloads that cover most use cases, it does not limit the **creation of custom payloads** for specific devices.
+For the `Rust` IDTP implementation - creation of the payload struct for custom IMU device is quite simple:
+
+```rust
+
+idtp_data! {
+    pub struct Payload {
+        pub acc_x: f32,
+        pub acc_y: f32,
+        pub acc_z: f32,
+        pub baro: f32,
+        /// Other metrics here...
+    }
+}
+
+impl IdtpPayload for Payload {
+    // PAYLOAD_ID is your custom payload type identifier
+    // within range 0x80-0xFF - for vendor-specific types.
+    const TYPE_ID: u8 = PAYLOAD_ID;
+}
+```
+That's all. No need for manual serialization/deserialization, size calculation etc. `IdtpPayload` handles that.
 
 ## 📜 License
 
