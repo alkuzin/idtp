@@ -81,6 +81,8 @@ mod std_payloads {
         AsMetricsArray, FromBytes, IdtpPayload, Immutable, IntoBytes,
         KnownLayout, idtp_data,
     };
+    use crate::IdtpError;
+    use core::ops::Range;
 
     idtp_data! {
         /// Accelerometer only (for 3-axis sensor).
@@ -197,6 +199,54 @@ mod std_payloads {
         /// **MUST** be normalized.
         ImuQuat = 0x06,
     }
+
+    impl From<PayloadType> for u8 {
+        /// Convert payload type enumeration to u8.
+        ///
+        /// # Parameters
+        /// - `mode` - given payload type to convert.
+        ///
+        /// # Returns
+        /// -  Payload type enumeration member in u8 representation.
+        fn from(payload_type: PayloadType) -> Self {
+            payload_type as Self
+        }
+    }
+
+    impl TryFrom<u8> for PayloadType {
+        /// The type returned in the event of a conversion error.
+        type Error = IdtpError;
+
+        /// Try to convert byte to IDTP payload type.
+        ///
+        /// # Parameters
+        /// - `byte` - given byte to convert.
+        ///
+        /// # Returns
+        /// - IDTP payload type from byte - in case of success.
+        /// - Error otherwise.
+        ///
+        /// # Errors
+        /// - Parse Error.
+        fn try_from(value: u8) -> Result<Self, Self::Error> {
+            match value {
+                0x00 => Ok(Self::Imu3Acc),
+                0x01 => Ok(Self::Imu3Gyr),
+                0x02 => Ok(Self::Imu3Mag),
+                0x03 => Ok(Self::Imu6),
+                0x04 => Ok(Self::Imu9),
+                0x05 => Ok(Self::Imu10),
+                0x06 => Ok(Self::ImuQuat),
+                _ => Err(Self::Error::ParseError),
+            }
+        }
+    }
+
+    /// Payload type values range for standard payloads.
+    pub const STANDARD_PAYLOAD_TYPE_RANGE: Range<u8> = 0x00..0x7F;
+
+    /// Payload type values range for custom payloads.
+    pub const CUSTOM_PAYLOAD_TYPE_RANGE: Range<u8> = 0x80..0xFF;
 
     impl IdtpPayload for Imu3Acc {
         const TYPE_ID: u8 = PayloadType::Imu3Acc as u8;
