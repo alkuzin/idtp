@@ -171,16 +171,29 @@ impl IdtpFrame {
     /// Get frame trailer size.
     ///
     /// # Returns
+    /// - Trailer size in bytes.
+    #[must_use]
+    pub fn trailer_size(&self) -> usize {
+        if let Ok(mode) = IdtpMode::try_from(self.header.mode) {
+            return Self::trailer_size_from(mode);
+        }
+        0
+    }
+
+    /// Get frame trailer size from mode.
+    ///
+    /// # Parameters
+    /// - `mode` - given IDTP mode to handle.
+    ///
+    /// # Returns
     /// - Trailer size in bytes is header is set.
     /// - `None` - otherwise.
     #[must_use]
-    pub fn trailer_size(&self) -> usize {
-        let mode = IdtpMode::from(self.header.mode);
-
+    pub const fn trailer_size_from(mode: IdtpMode) -> usize {
         match mode {
             IdtpMode::Safety => 4,
             IdtpMode::Secure => 32,
-            IdtpMode::Lite | IdtpMode::Unknown => 0,
+            IdtpMode::Lite => 0,
         }
     }
 
@@ -228,7 +241,8 @@ impl IdtpFrame {
     /// - `buffer` - given buffer to store IDTP frame bytes.
     /// - `calc_crc8` - given closure with custom `CRC-8` calculation logic.
     /// - `calc_crc32` - given closure with custom `CRC-32` calculation logic.
-    /// - `calc_hmac` - given closure with custom `HMAC-SHA256` calculation logic.
+    /// - `calc_hmac` - given closure with custom `HMAC-SHA256`
+    ///   calculation logic.
     ///
     /// # Returns
     /// - Frame size in bytes - in case of success.
@@ -280,7 +294,9 @@ impl IdtpFrame {
 
         // Packing frame trailer.
         let data_size = header_size + payload_size;
-        let mode = IdtpMode::from(header.mode);
+        let mode = IdtpMode::try_from(self.header.mode)
+            .map_err(|_| IdtpError::ParseError)?;
+
         let frame_size = data_size + trailer_size;
         let data =
             &buffer.get(..data_size).ok_or(IdtpError::BufferUnderflow)?;
@@ -300,13 +316,14 @@ impl IdtpFrame {
                     .ok_or(IdtpError::BufferUnderflow)?
                     .copy_from_slice(&hmac);
             }
-            IdtpMode::Lite | IdtpMode::Unknown => {}
+            IdtpMode::Lite => {}
         }
 
         Ok(frame_size)
     }
 
-    /// Validate IDTP frame integrity. `CRC` & `HMAC` calculation is software-based.
+    /// Validate IDTP frame integrity. `CRC` & `HMAC` calculation
+    /// is software-based.
     ///
     /// # Parameters
     /// - `buffer` - given IDTP frame bytes.
@@ -375,13 +392,10 @@ impl IdtpFrame {
             .0;
 
         let payload_size = header.payload_size as usize;
-        let mode = IdtpMode::from(header.mode);
 
-        let trailer_size = match mode {
-            IdtpMode::Safety => 4,
-            IdtpMode::Secure => 32,
-            IdtpMode::Lite | IdtpMode::Unknown => 0,
-        };
+        let mode = IdtpMode::try_from(header.mode)
+            .map_err(|_| IdtpError::ParseError)?;
+        let trailer_size = Self::trailer_size_from(mode);
 
         let data_size = header_size + payload_size;
         let expected_size = data_size + trailer_size;
@@ -421,7 +435,6 @@ impl IdtpFrame {
                     return Err(IdtpError::InvalidHMac);
                 }
             }
-            IdtpMode::Unknown => return Err(IdtpError::InvalidCrc),
         }
 
         Ok(())

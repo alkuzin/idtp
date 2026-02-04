@@ -3,7 +3,9 @@
 
 //! IDTP header related declarations.
 
-use crate::{FromBytes, Immutable, IntoBytes, KnownLayout, idtp_data};
+use crate::{
+    FromBytes, IdtpError, Immutable, IntoBytes, KnownLayout, idtp_data,
+};
 
 /// Value to signal the start of a new IDTP frame.
 pub const IDTP_PREAMBLE: u32 = 0x5054_4449;
@@ -28,8 +30,6 @@ pub enum IdtpMode {
     /// data spoofing. MUST be used for data transmission over unsecured
     /// channels.
     Secure = 0x02,
-    /// Unknown mode. No special handling required (used as placeholder).
-    Unknown = 0xff,
 }
 
 impl From<IdtpMode> for u8 {
@@ -45,20 +45,27 @@ impl From<IdtpMode> for u8 {
     }
 }
 
-impl From<u8> for IdtpMode {
-    /// Convert byte to IDTP operating mode.
+impl TryFrom<u8> for IdtpMode {
+    /// The type returned in the event of a conversion error.
+    type Error = IdtpError;
+
+    /// Try to convert byte to IDTP mode.
     ///
     /// # Parameters
-    /// - `bytes` - given byte slice to convert.
+    /// - `byte` - given byte to convert.
     ///
     /// # Returns
-    /// - IDTP operating mode from byte slice.
-    fn from(byte: u8) -> Self {
-        match byte {
-            0x00 => Self::Lite,
-            0x01 => Self::Safety,
-            0x02 => Self::Secure,
-            _ => Self::Unknown,
+    /// - IDTP mode from byte - in case of success.
+    /// - Error otherwise.
+    ///
+    /// # Errors
+    /// - Parse Error.
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x00 => Ok(Self::Lite),
+            0x01 => Ok(Self::Safety),
+            0x02 => Ok(Self::Secure),
+            _ => Err(Self::Error::ParseError),
         }
     }
 }
