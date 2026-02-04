@@ -6,7 +6,7 @@
 #[cfg(feature = "software_impl")]
 use crate::crypto;
 use crate::{
-    IDTP_HEADER_SIZE, IdtpError, IdtpHeader, IdtpResult, Mode,
+    IDTP_HEADER_SIZE, IdtpError, IdtpHeader, IdtpMode, IdtpResult,
     payload::IdtpPayload,
 };
 use zerocopy::{FromBytes, IntoBytes};
@@ -175,12 +175,12 @@ impl IdtpFrame {
     /// - `None` - otherwise.
     #[must_use]
     pub fn trailer_size(&self) -> usize {
-        let mode = Mode::from(self.header.mode);
+        let mode = IdtpMode::from(self.header.mode);
 
         match mode {
-            Mode::Safety => 4,
-            Mode::Secure => 32,
-            Mode::Lite | Mode::Unknown => 0,
+            IdtpMode::Safety => 4,
+            IdtpMode::Secure => 32,
+            IdtpMode::Lite | IdtpMode::Unknown => 0,
         }
     }
 
@@ -280,27 +280,27 @@ impl IdtpFrame {
 
         // Packing frame trailer.
         let data_size = header_size + payload_size;
-        let mode = Mode::from(header.mode);
+        let mode = IdtpMode::from(header.mode);
         let frame_size = data_size + trailer_size;
         let data =
             &buffer.get(..data_size).ok_or(IdtpError::BufferUnderflow)?;
 
         match mode {
-            Mode::Safety => {
+            IdtpMode::Safety => {
                 let crc32 = calc_crc32(data)?;
                 buffer
                     .get_mut(data_size..frame_size)
                     .ok_or(IdtpError::BufferUnderflow)?
                     .copy_from_slice(&crc32.to_le_bytes());
             }
-            Mode::Secure => {
+            IdtpMode::Secure => {
                 let hmac = calc_hmac(data)?;
                 buffer
                     .get_mut(data_size..frame_size)
                     .ok_or(IdtpError::BufferUnderflow)?
                     .copy_from_slice(&hmac);
             }
-            Mode::Lite | Mode::Unknown => {}
+            IdtpMode::Lite | IdtpMode::Unknown => {}
         }
 
         Ok(frame_size)
@@ -375,12 +375,12 @@ impl IdtpFrame {
             .0;
 
         let payload_size = header.payload_size as usize;
-        let mode = Mode::from(header.mode);
+        let mode = IdtpMode::from(header.mode);
 
         let trailer_size = match mode {
-            Mode::Safety => 4,
-            Mode::Secure => 32,
-            Mode::Lite | Mode::Unknown => 0,
+            IdtpMode::Safety => 4,
+            IdtpMode::Secure => 32,
+            IdtpMode::Lite | IdtpMode::Unknown => 0,
         };
 
         let data_size = header_size + payload_size;
@@ -396,8 +396,8 @@ impl IdtpFrame {
 
         // Checking frame trailer.
         match mode {
-            Mode::Lite => {}
-            Mode::Safety => {
+            IdtpMode::Lite => {}
+            IdtpMode::Safety => {
                 let computed_crc32 = calc_crc32(data)?;
                 let received_crc32 = u32::from_le_bytes(
                     buffer
@@ -411,7 +411,7 @@ impl IdtpFrame {
                     return Err(IdtpError::InvalidCrc);
                 }
             }
-            Mode::Secure => {
+            IdtpMode::Secure => {
                 let computed_hmac = calc_hmac(data)?;
                 let received_hmac = buffer
                     .get(data_size..frame_size)
@@ -421,7 +421,7 @@ impl IdtpFrame {
                     return Err(IdtpError::InvalidHMac);
                 }
             }
-            Mode::Unknown => return Err(IdtpError::InvalidCrc),
+            IdtpMode::Unknown => return Err(IdtpError::InvalidCrc),
         }
 
         Ok(())

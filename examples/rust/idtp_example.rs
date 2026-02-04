@@ -4,7 +4,7 @@
 //! IDTP v2.1.0 usage example.
 
 use idtp::{
-    IdtpFrame, IdtpHeader, Mode,
+    IdtpFrame, IdtpHeader, IdtpMode,
     payload::{Imu3Acc, Imu3Gyr, Imu6},
 };
 use std::process;
@@ -30,7 +30,7 @@ fn main() {
     let mut frame = IdtpFrame::new();
     let mut header = IdtpHeader::new();
 
-    header.mode = Mode::Safety as u8;
+    header.mode = IdtpMode::Safety.into();
     header.device_id = 0xABCD;
     header.timestamp = 12345678;
     header.sequence = 1;

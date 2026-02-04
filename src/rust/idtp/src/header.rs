@@ -15,7 +15,7 @@ pub const IDTP_VERSION: u8 = 0x21;
 /// IDTP operating mode.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u8)]
-pub enum Mode {
+pub enum IdtpMode {
     /// `IDTP-L (Lite mode)` - operating mode for minimum latency & overhead
     /// with general protection. SHOULD be used for trusted channels only.
     Lite = 0x00,
@@ -32,7 +32,20 @@ pub enum Mode {
     Unknown = 0xff,
 }
 
-impl From<u8> for Mode {
+impl From<IdtpMode> for u8 {
+    /// Convert IDTP mode to u8.
+    ///
+    /// # Parameters
+    /// - `mode` - given IDTP mode to convert.
+    ///
+    /// # Returns
+    /// -  IDTP mode in u8 representation.
+    fn from(mode: IdtpMode) -> Self {
+        mode as Self
+    }
+}
+
+impl From<u8> for IdtpMode {
     /// Convert byte to IDTP operating mode.
     ///
     /// # Parameters
