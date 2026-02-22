@@ -5,6 +5,10 @@
 ![Platform](https://img.shields.io/badge/platform-Cross--Platform-green)
 [![Spec](https://img.shields.io/badge/specification-Available-blue)](docs/specification.md)
 
+> ⚠️ DEPRECATED: Current version IDTP v2.x+ is **no longer supported**.
+Development continued in the new [INDTP protocol](https://github.com/alkuzin/indtp).
+
+
 **Inertial Measurement Unit Data Transfer Protocol (IDTP)** - lightweight protocol designed for high-performance and reliable IMU data transmission between microcontrollers and host systems.
 
 It is tailored for **autonomous navigation**, **wearable devices** and **robotics** where low latency, and data integrity are paramount.
@@ -25,6 +29,7 @@ IDTP solves the problem of **unifying data exchange** between different types of
   - `IDTP-S (Safety)`: **CRC-32** for the whole frame protection.
   - `IDTP-SEC (Secure)`: **HMAC-SHA256** for data spoofing protection.
 - **Standard & custom payloads**: IDTP supports several standard payloads that cover most of the uses and ready to use out the box.
+
 ---
 
 ![IDTP Frame Structure](res/idtp_v2.0.0_frame.png)
@@ -38,11 +43,7 @@ read [technical specification v2.1.0](docs/SPECIFICATION.md).
 
 ## 📦 Implementations
 
-*   **[C Implementation](src/c)**:
-      * Header-only library. Easy to integrate into any MCU vendor HAL.
-      * Portable (only `stdint.h` & `string.h` headers are used).
-      * Zero-allocation library.
-*   **[Rust Implementation](src/rust)**:
+    **[Rust Implementation](src/rust)**:
     *   Fully `no_std` compatible. Designed specifically for memory-safe embedded environments.
     *   Zero-allocation crate.
     *   Few external dependencies.
@@ -70,6 +71,7 @@ impl IdtpPayload for Payload {
     const TYPE_ID: u8 = PAYLOAD_ID;
 }
 ```
+
 That's all. No need for manual serialization/deserialization, size calculation etc. `IdtpPayload` handles that.
 
 ## 📜 License
@@ -80,7 +82,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+<http://www.apache.org/licenses/LICENSE-2.0>
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
